@@ -50,17 +50,31 @@ def get_tse_data():
         # 2. Dados de Votação (para votos e situação)
         df_vote = download_and_extract_ms(url_vote, "votacao_candidato_munzona_2024_MS.csv")
         
-        # Agrupar votos por candidato (pois no arquivo original vem por zona/município)
-        # O ID único do candidato no TSE é o SQ_CANDIDATO
+        # Mapeamento flexível de colunas (o TSE às vezes muda o nome entre DS_SITUACAO_TOT_TURNO e DS_SITUACAO_CANDIDATO_TOT)
+        col_situacao = 'DS_SITUACAO_TOT_TURNO'
+        if col_situacao not in df_vote.columns:
+            if 'DS_SITUACAO_CANDIDATO_TOT' in df_vote.columns:
+                col_situacao = 'DS_SITUACAO_CANDIDATO_TOT'
+            else:
+                # Se não encontrar nenhuma, tenta listar as disponíveis para diagnóstico
+                raise KeyError(f"Coluna de situação não encontrada. Disponíveis: {list(df_vote.columns)[:10]}...")
+
+        # Agrupar votos por candidato
         df_vote_grouped = df_vote.groupby('SQ_CANDIDATO').agg({
             'QT_VOTOS_NOMINAIS': 'sum',
-            'DS_SITUACAO_TOT_TURNO': 'first' # Eleito, Suplente, etc.
+            col_situacao: 'first'
         }).reset_index()
+        
+        # Padroniza o nome da coluna de situação para o resto do app
+        df_vote_grouped = df_vote_grouped.rename(columns={col_situacao: 'DS_SITUACAO_TOT_TURNO'})
 
         # 3. Cruzamento (Merge)
-        # Selecionamos apenas as colunas necessárias de candidatos
         cols_cand = ['SQ_CANDIDATO', 'NM_URNA_CANDIDATO', 'SG_PARTIDO', 'NM_MUNICIPIO', 'NR_CANDIDATO']
         df_final = pd.merge(df_cand[cols_cand], df_vote_grouped, on='SQ_CANDIDATO', how='inner')
+        
+        # Se o merge resultar vazio, tenta um merge menos restritivo ou avisa
+        if df_final.empty:
+            raise ValueError("O cruzamento de dados (merge) resultou em uma tabela vazia.")
         
         return df_final
     
