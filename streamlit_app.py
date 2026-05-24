@@ -46,7 +46,8 @@ def get_tse_data():
         df_vote = download_and_extract_ms(url_vote, "votacao_candidato_munzona_2024_MS.csv")
         
         # Auditoria de Colunas de Situação (Mapeamento Exaustivo)
-        possiveis_colunas = ['DS_SITUACAO_TOT_TURNO', 'DS_SITUACAO_CANDIDATO_TOT', 'DS_SITUACAO_POS_PLEITO']
+        # O log de erro mostrou que o nome correto é 'DS_SIT_TOT_TURNO'
+        possiveis_colunas = ['DS_SIT_TOT_TURNO', 'DS_SITUACAO_TOT_TURNO', 'DS_SITUACAO_CANDIDATO_TOT', 'DS_SITUACAO_POS_PLEITO']
         col_situacao = next((c for c in possiveis_colunas if c in df_vote.columns), None)
         
         if not col_situacao:
